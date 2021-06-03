@@ -25,7 +25,7 @@ C 160 10 180 10 180 10
     <Page title="Text">
       <Example title="Text">
         <Svg height="30" width="100">
-          <Text x="0" y="9" fill="red" textAnchor="middle">
+          <Text x="50" y="9" fill="red" textAnchor="middle">
             I love SVG!!!
           </Text>
         </Svg>

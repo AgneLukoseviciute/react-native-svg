@@ -25,13 +25,43 @@ void TSpanView::UpdateProperties(IJSValueReader const &reader, bool forceUpdate,
   __super::UpdateProperties(reader, forceUpdate, invalidate);
 }
 
-void TSpanView::CreateGeometry(UI::Xaml::CanvasControl const &canvas) {
+void TSpanView::CreateGeometry(UI::Xaml::CanvasControl const &canvas, CanvasDrawingSession const &session) {
+ /* //UPDATED IMPLEMENTATION
+  
+  Microsoft::Graphics::Canvas::Text::CanvasTextFormat const &textFormat{};
   auto const &resourceCreator{canvas.try_as<ICanvasResourceCreator>()};
-  Microsoft::Graphics::Canvas::Text::CanvasTextFormat const& textFormat{};
+  auto geometry{Geometry()};
+  textFormat.FontSize(FontSize());
+  textFormat.FontFamily(FontFamily());
+  textFormat.FontWeight(Utils::FontWeightFrom(FontWeight(), SvgParent()));
+  auto const &testBrush{Utils::GetCanvasBrush(StrokeBrushId(), Stroke(), SvgRoot(), geometry, resourceCreator)};
+
+  session.DrawText(
+      to_hstring("test-string"), 1.0, 1.0, canvas.Size().Width, canvas.Size().Height, testBrush, textFormat);*/
+
+  //OLD IMPLEMENTATION
+  auto const &resourceCreator{canvas.try_as<ICanvasResourceCreator>()};
+  Microsoft::Graphics::Canvas::Text::CanvasTextFormat const &textFormat{};
   textFormat.FontSize(FontSize());
   textFormat.FontFamily(FontFamily());
   textFormat.FontWeight(Utils::FontWeightFrom(FontWeight(), SvgParent()));
 
-  Geometry(Geometry::CanvasGeometry::CreateText({resourceCreator, to_hstring(m_content), textFormat, canvas.Size().Width, canvas.Size().Height}));
+  Geometry(Geometry::CanvasGeometry::CreateText(
+      {resourceCreator, to_hstring(m_content), textFormat, canvas.Size().Width, canvas.Size().Height}));
+}
+
+void TSpanView::Render(UI::Xaml::CanvasControl const &canvas, CanvasDrawingSession const &session) {
+  auto const &transform{session.Transform()};
+
+  if (m_propSetMap[RNSVG::BaseProp::Matrix]) {
+    session.Transform(transform * SvgTransform());
+  }
+
+  if (auto const &opacityLayer{session.CreateLayer(m_opacity)}) {
+    CreateGeometry(canvas, session);
+
+    opacityLayer.Close();
+  }
+  session.Transform(transform);
 }
 } // namespace winrt::RNSVG::implementation
