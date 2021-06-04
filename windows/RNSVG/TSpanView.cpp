@@ -2,8 +2,8 @@
 #include "TSpanView.h"
 #include "TSpanView.g.cpp"
 
-#include "Utils.h"
 #include <winrt/Microsoft.Graphics.Canvas.Text.h>
+#include "Utils.h"
 
 using namespace winrt;
 using namespace Microsoft::Graphics::Canvas;
@@ -26,42 +26,58 @@ void TSpanView::UpdateProperties(IJSValueReader const &reader, bool forceUpdate,
 }
 
 void TSpanView::CreateGeometry(UI::Xaml::CanvasControl const &canvas, CanvasDrawingSession const &session) {
- /* //UPDATED IMPLEMENTATION
-  
-  Microsoft::Graphics::Canvas::Text::CanvasTextFormat const &textFormat{};
-  auto const &resourceCreator{canvas.try_as<ICanvasResourceCreator>()};
-  auto geometry{Geometry()};
-  textFormat.FontSize(FontSize());
-  textFormat.FontFamily(FontFamily());
-  textFormat.FontWeight(Utils::FontWeightFrom(FontWeight(), SvgParent()));
-  auto const &testBrush{Utils::GetCanvasBrush(StrokeBrushId(), Stroke(), SvgRoot(), geometry, resourceCreator)};
+   auto const &resourceCreator{canvas.try_as<ICanvasResourceCreator>()};
+   Microsoft::Graphics::Canvas::Text::CanvasTextFormat const &textFormat{};
+   textFormat.FontSize(FontSize());
+   textFormat.FontFamily(FontFamily());
+   textFormat.FontWeight(Utils::FontWeightFrom(FontWeight(), SvgParent()));
 
-  session.DrawText(
-      to_hstring("test-string"), 1.0, 1.0, canvas.Size().Width, canvas.Size().Height, testBrush, textFormat);*/
+   //UPDATED IMPLEMENTATION
+   auto const &testBrush{Brushes::CanvasSolidColorBrush(resourceCreator, Colors::Red())};
+   session.DrawText(to_hstring(m_content), 10.0f, 10.0f, canvas.Size().Width, canvas.Size().Height, testBrush, textFormat);
 
-  //OLD IMPLEMENTATION
-  auto const &resourceCreator{canvas.try_as<ICanvasResourceCreator>()};
-  Microsoft::Graphics::Canvas::Text::CanvasTextFormat const &textFormat{};
-  textFormat.FontSize(FontSize());
-  textFormat.FontFamily(FontFamily());
-  textFormat.FontWeight(Utils::FontWeightFrom(FontWeight(), SvgParent()));
-
+  // OLD IMPLEMENTATION
   Geometry(Geometry::CanvasGeometry::CreateText(
       {resourceCreator, to_hstring(m_content), textFormat, canvas.Size().Width, canvas.Size().Height}));
 }
 
 void TSpanView::Render(UI::Xaml::CanvasControl const &canvas, CanvasDrawingSession const &session) {
-  auto const &transform{session.Transform()};
+  auto const &resourceCreator{canvas.try_as<ICanvasResourceCreator>()};
 
+  CreateGeometry(canvas, session);
+
+  auto geometry{Geometry()};
   if (m_propSetMap[RNSVG::BaseProp::Matrix]) {
-    session.Transform(transform * SvgTransform());
+    geometry = geometry.Transform(SvgTransform());
   }
 
+  geometry = Geometry::CanvasGeometry::CreateGroup(resourceCreator, {geometry}, FillRule());
+
   if (auto const &opacityLayer{session.CreateLayer(m_opacity)}) {
-    CreateGeometry(canvas, session);
+    if (auto const &fillLayer{session.CreateLayer(FillOpacity())}) {
+      auto const &fill{Utils::GetCanvasBrush(FillBrushId(), Fill(), SvgRoot(), geometry, resourceCreator)};
+      session.FillGeometry(geometry, fill);
+      fillLayer.Close();
+    }
+
+    if (auto const &strokeLayer{session.CreateLayer(StrokeOpacity())}) {
+      Geometry::CanvasStrokeStyle strokeStyle{};
+      strokeStyle.StartCap(StrokeLineCap());
+      strokeStyle.EndCap(StrokeLineCap());
+      strokeStyle.LineJoin(StrokeLineJoin());
+      strokeStyle.DashOffset(StrokeDashOffset());
+      strokeStyle.MiterLimit(StrokeMiterLimit());
+
+      float canvasDiagonal{Utils::GetCanvasDiagonal(canvas.Size())};
+      float strokeWidth{Utils::GetAbsoluteLength(StrokeWidth(), canvasDiagonal)};
+      strokeStyle.CustomDashStyle(Utils::GetAdjustedStrokeArray(StrokeDashArray(), strokeWidth, canvasDiagonal));
+
+      auto const &stroke{Utils::GetCanvasBrush(StrokeBrushId(), Stroke(), SvgRoot(), geometry, resourceCreator)};
+      session.DrawGeometry(geometry, stroke, strokeWidth, strokeStyle);
+      strokeLayer.Close();
+    }
 
     opacityLayer.Close();
   }
-  session.Transform(transform);
 }
 } // namespace winrt::RNSVG::implementation

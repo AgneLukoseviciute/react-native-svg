@@ -12,9 +12,9 @@ public:
       Microsoft::Graphics::Canvas::CanvasDrawingSession const &session);
 
   void UpdateProperties(Microsoft::ReactNative::IJSValueReader const &reader, bool forceUpdate, bool invalidate);
-  //void CreateGeometry(Microsoft::Graphics::Canvas::UI::Xaml::CanvasControl const &canvas);
-  void CreateGeometry(Microsoft::Graphics::Canvas::UI::Xaml::CanvasControl const
-                          &canvas, Microsoft::Graphics::Canvas::CanvasDrawingSession const &session);
+  void CreateGeometry(
+      Microsoft::Graphics::Canvas::UI::Xaml::CanvasControl const &canvas,
+      Microsoft::Graphics::Canvas::CanvasDrawingSession const &session);
 
 private:
   std::string m_content;
